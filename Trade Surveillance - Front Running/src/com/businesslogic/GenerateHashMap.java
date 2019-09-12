@@ -1,5 +1,11 @@
 package com.businesslogic;
 import com.hashMap.*;
+
+import org.json.JSONException;
+import org.json.simple.JSONArray;
+import org.json.JSONObject;
+import org.json.simple.parser.JSONParser;
+import org.json.simple.parser.ParseException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map.Entry;
@@ -7,7 +13,12 @@ import java.util.Set;
 
 import com.businesslogic.ExtractTradeData;
 import com.dao.TradeListDAOImpl;
+import com.google.gson.Gson;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonParser;
 import com.pojo.TradeList;
+
+import sun.rmi.runtime.Log;
 //import com.dao.*;
 
 public class GenerateHashMap {
@@ -16,33 +27,12 @@ public class GenerateHashMap {
 	public HashMap<String, HashMap<Integer, TradeInfo>> past = new HashMap<String, HashMap<Integer, TradeInfo>>(); 
 	public HashMap<String, HashMap<Integer, TradeInfo>> future = new HashMap<String, HashMap<Integer, TradeInfo>>(); 
 	ArrayList<TradeList> trades = null;
-	static int interval = 1;
+	static int interval = 60;
 	int databaseSize;
 	//HashMap(TraderID , TradeIDList[])
 	HashMap<Integer,ArrayList<Integer>> trackFraudTrades = new HashMap<Integer,ArrayList<Integer>>();
 	ArrayList<Integer> fraudulentTransactions;
 	
-	public GenerateHashMap(ArrayList<TradeList> trades) {
-		this.databaseSize=3;
-		HashMap<String, HashMap<Integer,TradeInfo>> past = new HashMap<String, HashMap<Integer, TradeInfo>>();
-		
-		HashMap<String, HashMap<Integer,TradeInfo>> future = new HashMap<String, HashMap<Integer, TradeInfo>>();
-		System.out.println("Blah");
-		ArrayList<Integer> tradeNumberList2 = new ArrayList<Integer>();
-		tradeNumberList2.add(1);
-		HashMap<Integer, TradeInfo> pastInner = new HashMap<Integer,TradeInfo>();
-		TradeInfo tradeInfo = new TradeInfo(12000, tradeNumberList2);
-		pastInner.put(1, tradeInfo);
-		this.past.put("apple;buy;shares", pastInner);
-		System.out.println("Blah");
-		
-		ArrayList<Integer> tradeNumberList3 = new ArrayList<Integer>();
-		tradeNumberList3.add(3);
-		HashMap<Integer, TradeInfo> futureInner = new HashMap<Integer,TradeInfo>();
-		TradeInfo tradeInfo2 = new TradeInfo(13000, tradeNumberList3);
-		futureInner.put(1, tradeInfo2);
-		this.future.put("apple;sell;shares", futureInner);
-	}
  	
 	public GenerateHashMap() {
 			this.fraudulentTransactions = new ArrayList<Integer>();
@@ -112,7 +102,7 @@ public class GenerateHashMap {
 //			System.out.println(this.future);
 	}
 	
-	public ArrayList<ResultObject> parseDatabase(ArrayList<TradeList> allTrades, HashMap<String, HashMap<Integer,TradeInfo>> past, HashMap<String, HashMap<Integer, TradeInfo>> future) {
+	public JSONObject parseDatabase(ArrayList<TradeList> allTrades, HashMap<String, HashMap<Integer,TradeInfo>> past, HashMap<String, HashMap<Integer, TradeInfo>> future) {
 		System.out.println(this.databaseSize);
 		int current = 0;
 		int pastStart = 0;
@@ -135,7 +125,7 @@ public class GenerateHashMap {
 			System.out.println(this.future);
 //			
 			
-			if(i>=1 && isLargeTrade(trade)) {
+			if(i>=1 && isLargeTrade(trade) ) {
 				findFRScenario(trade); 
 			}
 			
@@ -286,8 +276,32 @@ public class GenerateHashMap {
 			//remove futureStart from the table and add futureEnd+1 to the table
 
 		}
-		return this.result;
+		System.out.println(result.size());
+		JSONArray jsonArray = new JSONArray();
+		for (int i=0; i < result.size(); i++) {
+		        JSONObject eachData = new JSONObject();
+		        try {
+					eachData.put("ScenarioNumber", result.get(i).getScenarioNumber());
+					eachData.put("ScenarioNumber", result.get(i).getListOfFrontRunningTrades());
+					eachData.put("ScenarioNumber", result.get(i).getListOfSuspiciousTrades());
+					eachData.put("ScenarioNumber", result.get(i).getCurrentTrade());
+					jsonArray.add(i, eachData);
+				} catch (JSONException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+		}
+		JSONObject root =new JSONObject();
+		try {
+			root.put("data", jsonArray);
+		} catch (JSONException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return root;
 	}
+	
+	
 	private void addIntoHashTable(HashMap<String, HashMap<Integer, TradeInfo>> hashTable, TradeList tradeList) {
 		String key = generateKey(tradeList);
 		System.out.println(key);
@@ -811,10 +825,9 @@ public class GenerateHashMap {
 	
 	public static void main(String[] args) {
 		GenerateHashMap obj = new GenerateHashMap();
-		ArrayList<ResultObject> result =  obj.parseDatabase(obj.trades, obj.past, obj.future);
+		JSONObject result = obj.parseDatabase(obj.trades, obj.past, obj.future);
 		System.out.println(result);
 	}
-	
 }
 
 
